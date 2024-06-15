@@ -1,0 +1,14 @@
+python evaluate_grailqability.py \
+ --data ../../data/grailqability/dataset/grailqability_v1.0_test_a_na_reference.json \
+ --predict ../../logs/grailqability/a/discriminator/test_best_epoch_th.json \
+ --fb_roles ../../data/grailqability/ontology/fb_roles \
+ --fb_types ../../data/grailqability/ontology/fb_types \
+ --reverse_properties ../../data/grailqability/ontology/reverse_properties \
+ --partial_zero_shot_type_drop ./meta_data/entity_type_deletion/test/zero-shot/partial/GrailQAbility_v1.0_test_eType_npuua.json \
+ --complete_zero_shot_type_drop ./meta_data/entity_type_deletion/test/zero-shot/full/GrailQAbility_v1.0_test_eType_ncuua.json \
+ --partial_zero_shot_rel_drop ./meta_data/relation_deletion/test/zero-shot/partial/GrailQAbility_v1.0_test_rel_npuua.json \
+ --complete_zero_shot_rel_drop ./meta_data/relation_deletion/test/zero-shot/full/GrailQAbility_v1.0_test_rel_ncuua.json \
+ --partial_zero_shot_type_drop ./meta_data/entity_type_deletion/test/zero-shot/partial/GrailQAbility_v1.0_test_eType_npuua.json \
+ --complete_zero_shot_type_drop ./meta_data/entity_type_deletion/test/zero-shot/full/GrailQAbility_v1.0_test_eType_ncuua.json \
+ --partial_zero_shot_rel_drop ./meta_data/relation_deletion/test/zero-shot/partial/GrailQAbility_v1.0_test_rel_npuua.json \
+ --complete_zero_shot_rel_drop ./meta_data/relation_deletion/test/zero-shot/full/GrailQAbility_v1.0_test_rel_ncuua.json
