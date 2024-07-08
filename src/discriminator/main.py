@@ -1,3 +1,4 @@
+import logging
 import sys
 import os
 
@@ -21,6 +22,7 @@ from t5_ranker_enc_dec import T5ForCandidateRanking
 from configs.common_config import freebase_addr, freebase_port, reverse_properties_file_path
 from configs.discriminator_config import *
 from common.semantic_matcher import matcher
+from utils.logging import Logger
 
 
 import gc
@@ -94,12 +96,20 @@ class Data:
             elif self.dataset in ["grailqa", "grailqability"]:
                 for d in f[:]:
                     #AU training
-                    if do_test or use_au_data:
+                    if do_test:
                         self.data.update({str(d["qid"]) : d})
-
+                    
                     else:
-                        if d["qType"] == "A":# and len(self.data) <=10:# and d["qid"] in [2100065014000]:
-                            self.data.update({str(d["qid"]) : d})
+                        if use_au_data:
+                            if split == "train":
+                                self.data.update({str(d["qid"]) : d})
+                            elif split == "dev":
+                                if d["s_expression"] != "NK":
+                                    self.data.update({str(d["qid"]) : d})
+
+                        else:
+                            if d["qType"] == "A":# and len(self.data) <=10:# and d["qid"] in [2100065014000]:
+                                self.data.update({str(d["qid"]) : d})
                 
             self.len = len(self.data)
             # print(self.data.keys())
@@ -257,6 +267,8 @@ class DiscriminatorDataset:
         questions_skipped = 0
         for qid_idx, qid in tqdm(enumerate(data_class.data)):
             
+            # if qid_idx>= 64:
+            #     break
             question = data_class.get_question_by_qid(qid)
 
             gold_sexp= ""
@@ -399,8 +411,8 @@ class DiscriminatorDataset:
         random.shuffle(self.model_input_data)
         # print(self.model_input_data[0])
         print("len of model input data : ", len(self.model_input_data))
-        print(valid_sexps_len)
-        print(questions_skipped)
+        print("valid_sexps_len dict : ", valid_sexps_len)
+        print("questions_skipped : ",questions_skipped)
 
     def __len__(self):
         return len(self.model_input_data)
@@ -460,13 +472,13 @@ def train(train_dataset, dev_dataset, model, gpus, use_au_data, target_id, args=
         num_training_steps=t_total
     )
 
-    print("length of data loader : ", len(train_dataloader))
-    print("optimisation steps : ",t_total)
+    training_logs.logger_obj.info(f"length of data loader : {len(train_dataloader)}")
+    training_logs.logger_obj.info(f"optimisation steps : {t_total}")
     
     num_steps = 0
     best_epoch = -1
     for epoch in range(args.num_train_epochs):
-        print(f"Training for epoch {epoch}")
+        training_logs.logger_obj.info(f"Training for epoch {epoch}")
 
         train_dataset.prepare_data(train_dataset.data_class, "train", use_au_data)
         train_dataloader = DataLoader(train_dataset, batch_size=args.train_batch_size)
@@ -492,8 +504,8 @@ def train(train_dataset, dev_dataset, model, gpus, use_au_data, target_id, args=
             loss.backward()
             epoch_loss += loss.item()
 
-            if (num_steps + 1) % 50 == 0:
-                print(f"num steps {num_steps}: ", epoch_loss/(idx+1))
+            if (num_steps + 1) % 100 == 0:
+                training_logs.logger_obj.info(f"num steps {num_steps}: {epoch_loss/(idx+1)}")
 
             if (num_steps + 1) % args.gradient_accumulation_steps == 0:
                 # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
@@ -508,14 +520,14 @@ def train(train_dataset, dev_dataset, model, gpus, use_au_data, target_id, args=
             model_to_save = model.module if hasattr(model, "module") else model
             model_to_save.t5_enc_dec.save_pretrained(f"{save_dir}/{str(epoch)}_steps")
 
-        print("epoch loss : ", epoch_loss/len(train_dataloader))
-        print(optimizer.param_groups[0]['lr'])
+        training_logs.logger_obj.info(f"epoch loss : {epoch_loss/len(train_dataloader)}")
+        training_logs.logger_obj.info(f"{optimizer.param_groups[0]['lr']}")
 
         em = eval(dev_dataloader, model, device, log_file=f"{log_dir}/epoch_{epoch}.txt", target_id=target_id)
         if em > best_em:
             best_em = em
             best_epoch = epoch
-            print("best_em : ", best_em)
+            training_logs.logger_obj.info(f"best_em : {best_em}")
             model_to_save = model.module if hasattr(model, "module") else model
             model_to_save.t5_enc_dec.save_pretrained(f"{save_dir}/best_model")
             # tokenizer.save_pretrained(f"{save_dir}/best_model")
@@ -524,8 +536,9 @@ def train(train_dataset, dev_dataset, model, gpus, use_au_data, target_id, args=
         model_to_save = model.module if hasattr(model, "module") else model
         model_to_save.t5_enc_dec.save_pretrained(f"{save_dir}/{str(epoch)}_epochs")
 
+        training_logs.logger_obj.info(f"EM : {em}, Best EM : {best_em}")
         if (epoch - best_epoch) >= args.patience:
-            print(f"Best model not changed since {args.patience} epochs")
+            training_logs.logger_obj.info(f"Best model not changed since {args.patience} epochs")
             exit()
 
     
@@ -555,6 +568,7 @@ def eval(eval_dataloader, model, device, log_file, target_id):
     em_5 = 0
     total_samples = 0
     print(len(eval_dataloader))
+
     for batch_idx, batch in tqdm(enumerate(eval_dataloader)):
 
 
@@ -679,6 +693,9 @@ if __name__ == '__main__':
     else:
         gpus = [0]
 
+    assert log_dir is not None and os.path.isdir(log_dir), f"Please create log directory : {log_dir}"
+    assert save_dir is not None and os.path.isdir(save_dir), f"Please create model directory : {save_dir}"
+
     if args.do_test:
         print("Testing...")
         print(f'{args.saved_model_path}/../tokenizer')    
@@ -694,6 +711,7 @@ if __name__ == '__main__':
         ranker_model = T5ForCandidateRanking(args.saved_model_path, target_id=target_id)
         ranker_model = ranker_model.to(device)
         test_dataset = DiscriminatorDataset(tokenizer, use_au_data=True, split=args.test_split,do_test=True, dataset=args.dataset)
+        # during inference only batch size = 1 is supported....
         test_dataloader = DataLoader(test_dataset, batch_size=1)
 
         print("Performing Evaluation...")
@@ -702,36 +720,38 @@ if __name__ == '__main__':
         exit()
 
 
-    tokenizer = AutoTokenizer.from_pretrained(f'{args.saved_model_path}',\
-                                               local_files_only=False) #cache_dir = "~/.cache/huggingface/transformers/",
-    special_tokens_dict = {'additional_special_tokens': ['[CLS]','[SEP]']}
-    num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
-    tokenizer.save_pretrained(f"{save_dir}/tokenizer")
-
-    target = "<extra_id_6>"
-    target_id = tokenizer(target).input_ids
-    assert len(target_id) == 2
-    target_id = target_id[0]
-
     if args.do_train:
         if os.path.exists(f"{save_dir}/best_model"):
             print("Model already exist")
             exit()
+        
+        tokenizer = AutoTokenizer.from_pretrained(f'{args.saved_model_path}',\
+                                               local_files_only=False) #cache_dir = "~/.cache/huggingface/transformers/",
+        special_tokens_dict = {'additional_special_tokens': ['[CLS]','[SEP]']}
+        num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+        tokenizer.save_pretrained(f"{save_dir}/tokenizer")
 
-        print("Training with following config")
-        print("batch size  : ", args.train_batch_size)
-        print("num neg samples : ", args.num_neg_samples)
-        print("num epochs : ", args.num_train_epochs)
-        print("gradient_accumulation_steps : ", args.gradient_accumulation_steps)
-        print("save_dir : ", save_dir)
-        print("log_dir : ", log_dir)
-        print("learning rate : ", args.learning_rate)
-        print("Use AU data : ", args.use_au_data)
-        print("GPU ids : ", gpus)
+        target = "<extra_id_6>"
+        target_id = tokenizer(target).input_ids
+        assert len(target_id) == 2
+        target_id = target_id[0]
 
+        training_logs = Logger(save_dir, "training")
+        training_logs.logger_obj.setLevel(logging.INFO)
+
+        training_logs.logger_obj.info("Training with following config")
+        training_logs.logger_obj.info(f"batch size  : {args.train_batch_size}")
+        training_logs.logger_obj.info(f"num neg samples : {args.num_neg_samples}")
+        training_logs.logger_obj.info(f"num epochs : {args.num_train_epochs}")
+        training_logs.logger_obj.info(f"gradient_accumulation_steps : {args.gradient_accumulation_steps}")
+        training_logs.logger_obj.info(f"save_dir : {save_dir}")
+        training_logs.logger_obj.info(f"log_dir : {log_dir}")
+        training_logs.logger_obj.info(f"learning rate : {args.learning_rate}")
+        training_logs.logger_obj.info(f"Use AU data : {args.use_au_data}")
+        training_logs.logger_obj.info(f"GPU ids : {gpus}")
+
+        dev_dataset = DiscriminatorDataset(tokenizer, use_au_data=args.use_au_data, split="dev", dataset=args.dataset)
         train_dataset = DiscriminatorDataset(tokenizer, use_au_data=args.use_au_data, split="train",num_neg_samples=args.num_neg_samples, dataset=args.dataset)
-        dev_dataset = DiscriminatorDataset(tokenizer, use_au_data=False, split="dev", dataset=args.dataset)
-
 
         ranker_model = T5ForCandidateRanking(args.saved_model_path, target_id=target_id)
         device = "cuda" if torch.cuda.is_available() else "cpu"
