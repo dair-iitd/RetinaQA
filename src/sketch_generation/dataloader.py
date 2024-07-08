@@ -1,18 +1,13 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.
-
 import json
-import re
-import random
 import copy
 
 
 class JsonLoader:
-    def __init__(self, file_path, split, dataset, train_type):
+    def __init__(self, file_path, split, dataset, q_type="AU", is_inf=False):
         with open(file_path,  'r', encoding='UTF-8') as file:
             f = json.load(file)
 
-            print(f"Preparing data for {split} with training type {train_type} : {len(f)}")
+            print(f"Preparing data for {split} : {len(f)}")
 
             if dataset == "webqsp":
                 self.data = []
@@ -28,32 +23,35 @@ class JsonLoader:
                 if split == "train":
                     self.data = []
 
-                    for d in f:
+                    for d in f[:]:
                         d_copy = copy.deepcopy(d)
 
                         # take only answerable questions for A training (grailQAbility)
-                        if ("qType" in d) and (train_type == "A") and (d["qType"] != "U"):
+                        if ("qType" in d) and (q_type == "A") and (d["qType"] != "U"):
                             self.data.append(d_copy)
 
                         # for grailQA
-                        elif not ("qType" in d) and (train_type == "A"):
+                        elif not ("qType" in d) and (q_type == "A"):
                             self.data.append(d_copy)
 
                         # take non-NK questions for AU training
-                        elif (train_type == "AU" ) and (d["s_expression"] != "NK"):
+                        elif (q_type == "AU" ) and (d["s_expression"] != "NK"):
                             self.data.append(d_copy)
 
 
-                # elif split == "dev":
-                #     self.data = []
-                #     for d in f:
-                #         d_copy = copy.deepcopy(d)
-                #         if train_type == "A" and d["qType"] == "U":
-                #             pass
-                #         elif train_type == "AU" and d["s_expression"] == "NK":
-                #             pass
-                #         else:
-                #             self.data.append(d_copy)
+                elif split == "dev":
+                    self.data = []
+                    for d in f:
+                        d_copy = copy.deepcopy(d)
+                        if is_inf:
+                            self.data.append(d_copy)
+                        else:
+                            if q_type == "A" and d["qType"] == "U":
+                                pass
+                            elif q_type == "AU" and d["s_expression"] == "NK":
+                                pass
+                            else:
+                                self.data.append(d_copy)
 
                 elif split == "train_nk":
                     self.data = []
@@ -70,7 +68,6 @@ class JsonLoader:
             print("length of data : ",self.len)
             self.file_path = file_path
 
-        # random.shuffle(self.data)
         self.split = split
         self.question_id_to_idx_dict = dict()  # question_id: str -> idx: int
         self.build_question_id_to_idx_dict()
@@ -84,24 +81,13 @@ class JsonLoader:
             self.question_id_to_idx_dict[str(question_id)] = idx
 
     def get_idx_by_question_id(self, question_id):
-        """
-        Get the index in the json file by the question id
-        :param question_id: the GrailQA question id
-        :return: if the question is in the file, return the index, otherwise -1
-        """
         question_id = str(question_id)
         if self.question_id_to_idx_dict is None or len(self.question_id_to_idx_dict) == 0:
             self.build_question_id_to_idx_dict()
         return self.question_id_to_idx_dict.get(question_id, -1)
 
     def get_sketch_by_idx(self, idx):
-        # return self.data[idx]['sketch']
         return self.data[idx]['sketch']
-
-    # def get_level_by_idx(self, idx):
-    #     if 'level' in self.data[idx]:
-    #         return self.data[idx]['level']
-    #     return 'n/a'
 
     def get_question_id_by_idx(self, idx, format='int'):
         qid = self.data[idx]['qid']
