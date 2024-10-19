@@ -1,7 +1,5 @@
-import json
 import os
 import pickle
-import shutil
 import torch.utils.data
 
 class HFDataset2(torch.utils.data.Dataset):
@@ -31,7 +29,7 @@ def pickle_load(file_path: str, default=None):
         obj = pickle.load(file)
     return obj
 
-'''
+
 def read_tsv_as_list(tsv_file_path: str, sep='\t'):
     res = []
     with open(tsv_file_path, 'r', encoding='UTF-8') as file:
@@ -40,6 +38,7 @@ def read_tsv_as_list(tsv_file_path: str, sep='\t'):
             res.append(line_split)
     return res
 
+'''
 
 def read_list_file(file_path: str):
     res = []
