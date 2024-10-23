@@ -262,7 +262,7 @@ def calc_em_f1_r(item, predict, matcher, level_count, level_em_sum, level_f1_sum
             answer.add(a['answer_argument'])
 
     if str(item['qid']) in predict:
-        if predict[str(item['qid'])]['logical_form'] in ["", "NLF", "no logical form"] and item['s_expression']=="NK":
+        if predict[str(item['qid'])]['logical_form'].strip() in ["", "NLF", "no logical form","none","NK"] and item['s_expression']=="NK":
             em = 1
         else:
             em = matcher.same_logical_form(predict[str(item['qid'])]['logical_form'], item['s_expression'])
@@ -405,7 +405,7 @@ if __name__ == '__main__':
         predict = json.load(f)  # should be of format {qid: {logical_form: <str>, answer: <list>}}
 
     for qid in predict:
-        if predict[qid]["logical_form"] in ["NK","","none"]:
+        if predict[qid]["logical_form"].strip() in ["NK","","none","no logical form"]:
             predict[qid]["answer"] = []
         
     reverse_properties, relation_dr, relations, upper_types, types = process_ontology(args.fb_roles, args.fb_types,
@@ -479,7 +479,7 @@ if __name__ == '__main__':
     print("---- Results overall ----\n", score_for_qids(data, all_qids, predict, matcher, level_count, level_em_sum, level_f1_sum))
     print("\n---- Results for A overall ----\n", score_for_qids(data, a_qids, predict, matcher, level_count, level_em_sum, level_f1_sum))
     print("\n---- Results for NA overall ----\n", score_for_qids(data, na_qids, predict, matcher, level_count, level_em_sum, level_f1_sum))
-    
+    exit()
     print("#######################################################")
     ### transformation wise score
     
