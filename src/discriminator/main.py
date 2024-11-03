@@ -108,7 +108,7 @@ class Data:
                                     self.data.update({str(d["qid"]) : d})
 
                         else:
-                            if d["qType"] == "A":# and len(self.data) <=10:# and d["qid"] in [2100065014000]:
+                            if self.dataset == "grailqa" or d["qType"] == "A":
                                 self.data.update({str(d["qid"]) : d})
                 
             self.len = len(self.data)
