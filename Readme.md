@@ -48,6 +48,11 @@ To run inference directly on GrailQAbility, use the links provided here to acces
 | A | Sketch Generation <br> Logical Form Candidates Cache <br> Discriminator | [link](https://drive.google.com/file/d/1uOljKF8Y4qMxZPc5RuOtDY7nU48Xa3uz/view?usp=sharing) <br> [link](https://drive.google.com/file/d/1SZ5xf-FzXm7oelwF2xJWgELjsYVVMmK1/view?usp=sharing) <br> [link](https://drive.google.com/file/d/1aWqp99zt2CoKxaxUMHmcf0zYCeRyRNg3/view?usp=sharing) |
 | AU | Sketch Generation <br> Logical Form Candidates Cache <br> Discriminator | [link](https://drive.google.com/file/d/18abHRPwxJlYt9CuhEeu3-GxIYnCPHNxG/view?usp=sharing) <br> [link](https://drive.google.com/file/d/1gbMgkynmfVA0F-4vzs0l1hMOP8aqKkZr/view?usp=sharing) <br> [link](https://drive.google.com/file/d/1HgMOJvyjwGIzoYD0HVV5D-JWZceV168h/view?usp=sharing) |
 
+To run inference directly on GrailQA, use the links provided here to access pre-trained model checkpoints for each stage. Follow the instructions in the respective sections to execute the inference process.
+
+|  Module | Checkpoint link |
+| :-----: | :-----: |
+| Sketch Generation <br> Logical Form Candidates Cache <br> Discriminator | [link](https://drive.google.com/file/d/1Jcli1ljKbkwxOV5Cua0bwA1xnAHVl9Kk/view?usp=sharing) <br> [link](https://drive.google.com/file/d/13ZXjd65g-9xs3z8GI7IsBaewOrtewJqK/view?usp=sharing) <br> [link](https://drive.google.com/file/d/1CM-2jJhDc-J984q9zD5CE9195ZX7Agvw/view?usp=sharing) 
 
 ## Training RetinaQA from scratch
 
